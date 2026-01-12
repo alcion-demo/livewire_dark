@@ -1,3 +1,7 @@
+@php
+use App\Enums\BookCategory;
+@endphp
+
 <div class="max-w-6xl mx-auto py-8 px-4">
     {{-- 上部：検索と登録 --}}
     <div class="mb-6 flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -39,6 +43,7 @@
                 <tr>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">書籍情報</th>
+                    <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">カテゴリー</th>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">価格</th>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">説明</th>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">操作</th>
@@ -77,8 +82,19 @@
                         </div>
                     </td>
                     <td class="p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        @if($book->category instanceof \App\Enums\BookCategory)
+                            {{-- Enumオブジェクトとして認識されている場合 --}}
+                            {{ $book->category->value }}
+                        @else
+                            {{-- 文字列（または数値）として入っている場合でもそのまま出す --}}
+                            {{ $book->category ?? '未設定' }}
+                        @endif
+                    </td>
+
+                    <td class="p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">
                         ¥{{ number_format($book->price) }}
                     </td>
+
                     <td class="p-4">
                         <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 w-64">{!! nl2br(e($book->description)) !!}</p>
                     </td>
@@ -107,12 +123,12 @@
         </table>
 
         {{-- ページネーション --}}
-        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
-            {{ $books->onEachSide(1)->links() }}
+        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 pagination-dark-fix">
+            {{ $books->onEachSide(1)->links('vendor.pagination.tailwind2') }}
         </div>
     </div>
 
-    {{-- モーダル部分は以前のダークモード対応のまま維持 --}}
+    {{-- モーダル --}}
     <x-dialog-modal wire:model="liveModal">
         <x-slot name="title">
             <h2 class="text-xl font-bold {{ $editWork ? 'text-emerald-500' : 'text-indigo-500 dark:text-indigo-400' }}">
@@ -122,12 +138,30 @@
 
         <x-slot name="content">
             <div class="space-y-4">
+                {{-- タイトル --}}
                 <div>
                     <x-label for="title" value="タイトル" class="font-bold mb-1 dark:text-gray-300" />
                     <x-input type="text" id="title" wire:model.lazy="title" class="w-full" />
                     @error('title') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
                 </div>
 
+                {{-- カテゴリー：ダークモード完全対応版 --}}
+                <div>
+                    <div>
+                        <x-label for="category" value="カテゴリー" class="font-bold mb-1 dark:text-gray-300" />
+                        <select id="category" wire:model="category" 
+                            class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition">
+                            <option value="">選択してください</option>
+                                @foreach(BookCategory::cases() as $cat)
+                                    {{-- $cat->value で '技術書' などの文字列が取得できます --}}
+                                    <option value="{{ $cat->value }}">{{ $cat->value }}</option>
+                                @endforeach
+                        </select>
+                    </div>
+                    @error('category') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
+                </div>
+
+                {{-- 画像プレビューとアップロード --}}
                 <div class="flex gap-4 items-end">
                     <div class="w-1/3">
                     @if ($newImage)
@@ -148,6 +182,7 @@
                     </div>
                 </div>
 
+                {{-- 価格 --}}
                 <div>
                     <x-label for="price" value="価格" class="font-bold mb-1 dark:text-gray-300" />
                     <div class="relative">
@@ -157,12 +192,14 @@
                     @error('price') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
                 </div>
 
+                {{-- URL --}}
                 <div>
                     <x-label for="url" value="参考URL" class="font-bold mb-1 dark:text-gray-300" />
                     <x-input type="text" id="url" wire:model="url" placeholder="https://amazon..." class="w-full" />
                     @error('url') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
                 </div>
 
+                {{-- 説明文 --}}
                 <div>
                     <x-label for="description" value="説明文" class="font-bold mb-1 dark:text-gray-300" />
                     <textarea id="description" rows="4" wire:model="description" 
@@ -174,11 +211,17 @@
 
         <x-slot name="footer">
             @if ($editWork)
-                <x-button class="bg-emerald-600 hover:bg-emerald-700 mr-3" wire:click="updateBook({{ $Id }})">更新する</x-button>
+                <x-button class="!bg-emerald-600 hover:!bg-emerald-700 mr-3 !text-white !border-none shadow-md" wire:click="updateBook({{ $Id }})">
+                    更新する
+                </x-button>
             @else
-                <x-button class="mr-3" wire:click="bookPost">登録する</x-button>
+                <x-button class="!bg-indigo-600 hover:!bg-indigo-700 mr-3 !text-white !border-none shadow-md" wire:click="bookPost">
+                    登録する
+                </x-button>
             @endif
-            <x-secondary-button wire:click="$toggle('liveModal')">キャンセル</x-secondary-button>
+            <x-secondary-button wire:click="$toggle('liveModal')" class="dark:!bg-gray-700 dark:!text-gray-300 dark:!border-gray-600">
+                キャンセル
+            </x-secondary-button>
         </x-slot>
     </x-dialog-modal>
 </div>

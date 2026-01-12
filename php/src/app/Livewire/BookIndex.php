@@ -8,6 +8,7 @@ use App\Models\Book;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Storage;
 use App\Services\BookService;
+use App\Enums\BookCategory;
 
 class BookIndex extends Component
 {
@@ -18,6 +19,7 @@ class BookIndex extends Component
 
     public $liveModal = false;
     public $title;
+    public $category;
     public $newImage;
     public $price;
     public $description;
@@ -29,6 +31,7 @@ class BookIndex extends Component
 
     protected $rules = [
         'title' => 'required|string|min:3|max:255',
+        'category' => 'nullable|string',
         'newImage' => 'nullable|image|max:1024',
         'price' => 'required|numeric|min:0',
         'description' => 'required|string|max:1000',
@@ -54,12 +57,12 @@ class BookIndex extends Component
      */
     public function bookPost(BookService $service){
         $this->validate();
-
+dd($category);
         $imagePath = null;
         $imagePath = $this->newImage ? $this->service->uploadImage($this->newImage) : null;
 
         $this->bookModel->createWithData($this->all(), $imagePath);
-        $this->reset(['title', 'newImage', 'price', 'description', 'url']);
+        $this->reset(['title', 'category', 'newImage', 'price', 'description', 'url']);
         $this->liveModal = false;
     }
 
@@ -68,7 +71,7 @@ class BookIndex extends Component
      */
     public function showBookModal(){
         $this->resetValidation();
-        $this->reset(['title', 'newImage', 'price', 'description', 'oldImage', 'url']);
+        $this->reset(['title', 'category','newImage', 'price', 'description', 'oldImage', 'url']);
         $this->editWork = false;
         $this->liveModal = true;
     }
@@ -135,7 +138,7 @@ class BookIndex extends Component
     {
         $this->liveModal = false;
         $this->resetValidation();
-        $this->reset(['title', 'newImage', 'price', 'description', 'Id', 'oldImage', 'url']); // フォームフィールドと、編集関連のプロパティをリセット
+        $this->reset(['title','category', 'newImage', 'price', 'description', 'Id', 'oldImage', 'url']); // フォームフィールドと、編集関連のプロパティをリセット
         $this->editWork = false; // 編集モードを終了
     }
 
@@ -144,7 +147,7 @@ class BookIndex extends Component
      */
     public function render()
     {
-        $booksQuery = Book::select('id', 'title', 'price', 'image', 'description', 'url', 'created_at');
+        $booksQuery = Book::select('id', 'category', 'title', 'price', 'image', 'description', 'url', 'created_at');
 
         // 検索キーワードがある場合、WHERE句を追加
         if (!empty($this->search)) {

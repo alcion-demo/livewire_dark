@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Book;
 use Carbon\Carbon;
+use App\Enums\BookCategory;
 
 class BookSeeder extends Seeder
 {
@@ -23,16 +24,22 @@ class BookSeeder extends Seeder
             return;
         }
 
+        $categories = BookCategory::cases();
+
         for ($i = 1; $i <= 10; $i++) {
             $randomDate = Carbon::now()->subDays(rand(0, 150));
             
             //フォルダ内の画像からランダムに1つ選ぶ
             $imagePath = $files[array_rand($files)];
 
+            // Enumからランダムに1つ選ぶ
+            $randomCategory = $categories[array_rand($categories)];
+
             Book::create([
                 'title' => 'テスト書籍 ' . $i,
+                'category'    => $randomCategory,
                 'price' => rand(500, 5000),
-                'description' => "これは既存の画像を使用して生成されたデータです。日付: {$randomDate->format('Y-m-d')}",
+                'description' => "カテゴリー: {$randomCategory->value} のテストデータです。",
                 'image' => $imagePath, // 例: 'books/filename.jpg'
                 'created_at' => $randomDate,
                 'updated_at' => $randomDate,
