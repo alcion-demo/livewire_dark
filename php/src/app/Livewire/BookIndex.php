@@ -7,6 +7,7 @@ use Livewire\WithFileUploads;
 use App\Models\Book;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Storage;
+use App\Services\BookService;
 
 class BookIndex extends Component
 {
@@ -34,30 +35,30 @@ class BookIndex extends Component
         'url' => 'nullable|url|max:2000',
     ];
 
+    protected Book $bookModel;
+    protected BookService $service;
+
+    /**
+     * Livewire の boot メソッドで一括注入
+     * construct
+     */
+    public function boot(Book $book, BookService $service)
+    {
+        $this->bookModel = $book;
+        $this->service = $service;
+    }
+
     /**
      * 登録画面
+     * @param App\Services\BookService
      */
-    public function bookPost(){
+    public function bookPost(BookService $service){
         $this->validate();
 
         $imagePath = null;
-        if ($this->newImage) {
-            $originalFileName = $this->newImage->getClientOriginalName();
-            $fileNameToStore = date('Ymd_His') . '_' . $originalFileName;
+        $imagePath = $this->newImage ? $this->service->uploadImage($this->newImage) : null;
 
-            $this->newImage->storeAs('books', $fileNameToStore, 'public');
-
-            $imagePath = 'books/' . $fileNameToStore;
-        }
-
-        Book::create([
-            'title' => $this->title,
-            'image' => $imagePath,
-            'price' => $this->price,
-            'description' => $this->description,
-            'url' => $this->url,
-        ]);
-
+        $this->bookModel->createWithData($this->all(), $imagePath);
         $this->reset(['title', 'newImage', 'price', 'description', 'url']);
         $this->liveModal = false;
     }
@@ -78,15 +79,13 @@ class BookIndex extends Component
      * @return view
      */
     public function showEditBookModal($id){
-        $book = Book::findOrFail($id);
-        $this->Id = $book->id;
-        $this->title = $book->title;
-        $this->oldImage = $book->image;
-        $this->price = $book->price;
-        $this->description = $book->description;
+        $book = $this->bookModel->findOrFail($id);
+
+        // これだけで OK！
+        $this->fill($book->toEditArray());
+
         $this->editWork = true;
         $this->liveModal = true;
-        $this->url = $book->url;
     }
 
     /**
@@ -97,39 +96,18 @@ class BookIndex extends Component
     public function updateBook($Id)
     {
         $this->validate();
-        $book = Book::findOrFail($Id);
+        $book = $this->bookModel->findOrFail($Id);
 
-        // 更新用データの準備（画像以外の項目）
-        $updateData = [
-            'title'       => $this->title,
-            'price'       => $this->price,
-            'description' => $this->description,
-            'url'         => $this->url,
-        ];
-
-        // 新しい画像がアップロードされている場合のみ処理
-        if ($this->newImage) {
-            // 古い画像が存在すれば削除（ストレージの肥大化防止）
-            if ($book->image && Storage::disk('public')->exists($book->image)) {
-                Storage::disk('public')->delete($book->image);
-            }
-
-            $originalFileName = $this->newImage->getClientOriginalName();
-            $fileNameToStore = date('Ymd_His') . '_' . $originalFileName;
-            $imagePath = $this->newImage->storeAs('books', $fileNameToStore, 'public');
-
-            // 更新用データに新しいパスをセット
-            $updateData['image'] = $imagePath;
+        $imagePath = $this->newImage ? $this->service->uploadImage($this->newImage) : null;
+        if ($imagePath) {
+            $this->service->deleteImage($book->image); // 古いのは消す
         }
 
-        $book->update($updateData);
+        // Model のメソッドを呼ぶだけ！
+        $book->updateWithData($this->all(), $imagePath);
 
-        $this->reset(['title', 'newImage', 'price', 'description', 'Id', 'oldImage', 'url']);
-        $this->resetValidation();
+        $this->reset();
         $this->liveModal = false;
-        $this->editWork = false;
-
-        session()->flash('message', '書籍情報を更新しました！');
 
     }
 
