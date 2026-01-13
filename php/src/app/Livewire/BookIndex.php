@@ -43,7 +43,7 @@ class BookIndex extends Component
     {
         return [
             'title' => 'required|string|min:3|max:255',
-            'category' => ['nullable', new Enum(BookCategory::class)],
+            'category' => ['required', new Enum(BookCategory::class)],
             'newImage' => 'nullable|image|max:1024',
             'price' => 'required|numeric|min:0',
             'description' => 'required|string|max:1000',
@@ -74,6 +74,8 @@ class BookIndex extends Component
         $this->bookModel->createWithData($this->all(), $imagePath);
         $this->reset(['title', 'category', 'newImage', 'price', 'description', 'url']);
         $this->liveModal = false;
+
+        session()->flash('message', '書籍が正常に登録されました！');
     }
 
     /**
@@ -81,7 +83,7 @@ class BookIndex extends Component
      */
     public function showBookModal(){
         $this->resetValidation();
-        $this->reset(['title', 'category','newImage', 'price', 'description', 'oldImage', 'url']);
+        $this->reset(['title', 'category', 'newImage', 'price', 'description', 'url', 'Id', 'oldImage']);
         $this->editWork = false;
         $this->liveModal = true;
     }
@@ -119,8 +121,10 @@ class BookIndex extends Component
         // Model のメソッドを呼ぶだけ！
         $book->updateWithData($this->all(), $imagePath);
 
-        $this->reset();
+        $this->reset(['title', 'category','newImage', 'price', 'description', 'oldImage', 'url']);
         $this->liveModal = false;
+
+        session()->flash('message', '書籍が正常に更新されました！');
 
     }
 
@@ -166,13 +170,13 @@ class BookIndex extends Component
         }
 
         // お気に入り件数を取得
-            $favoriteCount = Book::whereHas('favoritedBy', function($q) {
+            $favoriteCount = Book::whereHas('favoritedBy', function ($q) {
                 $q->where('user_id', auth()->id());
             })->count();
 
         // ★ お気に入りフィルターがONの場合、お気に入りが付加されている本だけに絞り込む
         if ($this->showOnlyFavorites) {
-            $booksQuery->whereHas('favoritedBy', function($q) {
+            $booksQuery->whereHas('favoritedBy', function ($q) {
                 $q->where('user_id', auth()->id());
             });
         }
@@ -208,6 +212,19 @@ class BookIndex extends Component
     {
         $this->showOnlyFavorites = !$this->showOnlyFavorites;
         $this->resetPage(); // ページネーションを1ページ目に戻す
+    }
+
+    /**
+     * ログインユーザーのお気に入りをすべて解除する
+     */
+    public function clearAllFavorites()
+    {
+        // ログイン中のユーザーのお気に入り本とのリレーションを空にする
+        auth()->user()->favoriteBooks()->detach();
+
+        // 画面を更新（お気に入りフィルター中なら一覧が空になる）
+        $this->resetPage(); 
+        session()->flash('message', 'すべてのお気に入りを解除しました。');
     }
 
 }

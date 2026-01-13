@@ -3,6 +3,23 @@ use App\Enums\BookCategory;
 @endphp
 
 <div class="max-w-6xl mx-auto py-8 px-4">
+    {{-- ★修正：メッセージ表示エリアを最上部へ移動し、Livewireの更新に強くする --}}
+    @if (session()->has('message'))
+        <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)"
+            class="mb-4 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 p-4 shadow-sm">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-green-700 dark:text-green-400">{{ session('message') }}</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- 上部：検索と登録 --}}
     <div class="mb-6 flex justify-between items-center bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div class="flex items-center flex-1">
@@ -17,28 +34,34 @@ use App\Enums\BookCategory;
                     class="block w-full pl-10 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 transition placeholder-gray-400">
             </div>
 
-            {{-- お気に入りフィルターボタン --}}
-            <div class="ml-4">
+            {{-- お気に入りフィルターエリア --}}
+            <div class="ml-4 flex items-center">
                 <button wire:click="toggleFavoriteFilter" 
-                    class="ml-4 inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm border
+                    class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm border
                     {{ $showOnlyFavorites 
                         ? 'bg-red-500 text-white border-red-500 hover:bg-red-600' 
                         : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600' 
                     }}">
-                    
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 {{ $showOnlyFavorites ? 'fill-current' : 'fill-none' }}" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
-                    
                     {{ $showOnlyFavorites ? '全表示に戻す' : 'お気に入り件数' }}
-
-                    {{-- ★ 件数が0より大きい時だけ表示するようにガードをかける --}}
                     @if($favoriteCount > 0)
-                        <span class="ml-4 px-2 py-0.5 text-xs rounded-full {{ $showOnlyFavorites ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-gray-600 text-gray-500' }}">
+                        <span class="ml-4 px-2 py-0.5 text-xs rounded-full {{ $showOnlyFavorites ? 'bg-white/20 text-white' : 'bg-gray-600 text-white' }}">
                             {{ $favoriteCount }}
                         </span>
                     @endif
                 </button>
+
+                @if($favoriteCount > 0)
+                    <button 
+                        wire:click="clearAllFavorites" 
+                        wire:confirm="すべてのお気に入りを解除してもよろしいですか？"
+                        class="ml-6 text-xs text-red-400 hover:text-red-300 underline whitespace-nowrap"
+                    >
+                        全解除
+                    </button>
+                @endif
             </div>
         </div>
 
@@ -50,16 +73,12 @@ use App\Enums\BookCategory;
 
     {{-- メインコンテンツ：テーブル --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
-        @if (session()->has('message'))
-            <div class="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 p-4 m-4">
-                <p class="text-green-700 dark:text-green-400">{{ session('message') }}</p>
-            </div>
-        @endif
+        {{-- ★元々ここにあった session メッセージ表示を上に移動しました --}}
 
-        <table class="w-full text-left border-collapse">
+        <table class="w-full text-left border-collapse table-auto">
             <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
                 <tr>
-                    <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                    <th class="w-16 p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">書籍情報</th>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">カテゴリー</th>
                     <th class="p-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">価格</th>
@@ -71,8 +90,8 @@ use App\Enums\BookCategory;
                 @forelse($books as $book)
                 <tr wire:key="book-{{ $book->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                     <td class="p-4 text-sm text-gray-500 dark:text-gray-400">#{{ $book->id }}</td>
-                    <td class="p-4">
-                        <div class="flex items-center space-x-8">
+                    <td class="pl-4 pr-2 py-4">
+                        <div class="flex items-center space-x-4">
                             <div class="h-16 w-12 flex-shrink-0">
                                 @if($book->image)
                                     <img class="h-16 w-12 object-cover rounded shadow-sm border border-gray-100 dark:border-gray-600" 
@@ -83,22 +102,22 @@ use App\Enums\BookCategory;
                                     </div>
                                 @endif
                             </div>
-                            <div class="flex-1 min-w-[200px]">
-                                <div class="text-sm font-bold text-gray-900 dark:text-gray-200" title="{{ $book->title }}">
+                            <div class="flex-shrink">
+                                <div class="text-sm font-bold text-gray-900 dark:text-gray-200">
                                     @if($book->url)
-                                        <a href="{{ $book->url }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 hover:underline inline-flex items-center">
-                                            <span class="truncate max-w-[180px]">{{ $book->title }}</span>
+                                        <a href="{{ $book->url }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 hover:underline inline-flex items-center whitespace-nowrap">
+                                            <span>{{ $book->title }}</span>
                                             <svg class="w-3 h-3 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                                         </a>
                                     @else
-                                        <span class="text-gray-500 dark:text-gray-400 truncate block max-w-[180px]">{{ $book->title }}</span>
+                                        <span class="text-gray-500 dark:text-gray-400 block whitespace-nowrap">{{ $book->title }}</span>
                                         <span class="text-[10px] font-normal text-gray-400 dark:text-gray-500 italic">URLなし</span>
                                     @endif
                                 </div>
                             </div>
                         </div>
                     </td>
-                    <td class="p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ $book->category->value ?? '未設定' }}</td>
+                    <td class="pl-2 pr-4 py-4 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ $book->category->value ?? '未設定' }}</td>
                     <td class="p-4 text-sm font-semibold text-gray-700 dark:text-gray-300 text-right">¥{{ number_format($book->price) }}</td>
                     <td class="p-4">
                         <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 w-64">{!! nl2br(e($book->description)) !!}</p>
@@ -134,7 +153,7 @@ use App\Enums\BookCategory;
                         </div>
                     </td>
                 </tr>
-                @endforelse {{-- ここが以前のエラーの原因（@endforeachになっていた可能性） --}}
+                @endforelse
             </tbody>
         </table>
 
@@ -166,6 +185,7 @@ use App\Enums\BookCategory;
                             <option value="{{ $cat->value }}">{{ $cat->value }}</option>
                         @endforeach
                     </select>
+                    @error('category') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
                 </div>
                 <div class="flex gap-4 items-end">
                     <div class="w-1/3">
@@ -185,10 +205,12 @@ use App\Enums\BookCategory;
                 <div>
                     <x-label for="price" value="価格" class="font-bold mb-1 dark:text-gray-300" />
                     <x-input type="text" id="price" wire:model.lazy="price" class="w-full" />
+                    @error('price') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
                 </div>
                 <div>
                     <x-label for="description" value="説明文" class="font-bold mb-1 dark:text-gray-300" />
                     <textarea id="description" rows="4" wire:model="description" class="w-full border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg"></textarea>
+                    @error('description') <span class="text-xs text-red-500 mt-1">{{ $message }}</span> @enderror
                 </div>
             </div>
         </x-slot>
