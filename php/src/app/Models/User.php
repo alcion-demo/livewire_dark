@@ -53,6 +53,16 @@ class User extends Authenticatable
     ];
 
     /**
+     * bookとuser関連付け
+     *
+     * @return App\Models\Book
+     */
+    public function favoriteBooks()
+    {
+        return $this->belongsToMany(Book::class);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

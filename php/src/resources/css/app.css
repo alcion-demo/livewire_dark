@@ -5,3 +5,15 @@
 [x-cloak] {
     display: none;
 }
+/* resources/css/app.css */
+@layer components {
+    .pagination-dark-fix nav span[aria-current="page"] span {
+        @apply bg-indigo-600 border-indigo-600 text-white !important;
+    }
+    .pagination-dark-fix nav a, 
+    .pagination-dark-fix nav span {
+        @apply dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+}

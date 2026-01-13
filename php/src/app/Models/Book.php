@@ -4,10 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use App\Enums\BookCategory;
 
 class Book extends Model
 {
-    protected $fillable = ['title', 'image', 'price', 'description', 'url'];
+    protected $fillable = ['title', 'category', 'image', 'price', 'description', 'url'];
+
+    protected $casts = [
+        'category' => BookCategory::class,
+    ];
+
+    /**
+     * bookとuser関連付け
+     *
+     * @return App\Models\User
+     */
+    public function favoritedBy()
+    {
+        return $this->belongsToMany(User::class);
+    }
 
     /**
      * 検索スコープ (renderをスッキリさせるため)
@@ -32,6 +47,7 @@ class Book extends Model
     {
         return $this->create([
             'title'       => $data['title'],
+            'category'    => $data['category'],
             'image'       => $imagePath,
             'price'       => $data['price'],
             'description' => $data['description'],
@@ -60,6 +76,7 @@ class Book extends Model
         return [
             'Id'          => $this->id,
             'title'       => $this->title,
+            'category'    => $this->category,
             'oldImage'    => $this->image,
             'price'       => $this->price,
             'description' => $this->description,

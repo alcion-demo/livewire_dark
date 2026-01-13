@@ -61,7 +61,8 @@ chmod -R 775 storage bootstrap/cache
 #### 3. 認証基盤インストール
 ```
 composer require laravel/jetstream
-php artisan jetstream:install livewire
+php artisan jetstream:install livewire --dark
+
 ```
 #### 4. フロントエンド依存関係  
 ```
