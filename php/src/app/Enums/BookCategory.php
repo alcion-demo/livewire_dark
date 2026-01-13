@@ -9,7 +9,9 @@ enum BookCategory: string
     case Business = 'ビジネス';
     case Other = 'その他';
 
-    // ラベルを取得するメソッド（表示用）
+    /**
+     * ラベルを取得するメソッド（表示用）
+     */
     public function label(): string
     {
         return $this->value;

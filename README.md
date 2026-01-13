@@ -21,6 +21,11 @@
 ## 学習・検証目的
 - 本プロジェクトは、Laravel における認証基盤（Jetstream）と
 Livewire を用いたサーバーサイド駆動 UI の理解を目的とした学習用アプリケーションです。
+PHPUnitおよびLivewireのテスト機能を活用して品質を管理しています。
+以下のコマンドで全てのテストを実行できます。
+```
+php artisan test
+```
 
 ## 技術選定の背景
 - フロントエンド専業を目指すのではなく、Laravel を軸としたバックエンド開発を主目的としているため、
@@ -92,6 +97,23 @@ php artisan migrate
 - `tests/` - テストコード
 - `vendor/` - Composer 依存ライブラリ（自動生成）
 
+## テスト済みの主要機能
+提供された BookIndex.php および Book.php に基づき、以下の項目が自動テストにより保証されています：
+
+- CRUD操作: 書籍の登録 (bookPost)、編集 (updateBook)、削除 (deleteBook) が正常に動作すること。
+
+- バリデーション:
+
+	- タイトル・価格・説明文の必須チェック。
+
+	- 価格の数値形式チェック。
+
+	- カテゴリーのEnum（BookCategory）整合性チェック。
+
+- お気に入り機能: ログインユーザーによるお気に入りの切り替え (toggleFavorite) がDBに反映されること。
+
+- データの整合性: 編集・削除時にデータベース (assertDatabaseHas, assertDatabaseMissing) が正しく更新されること。
+
 ## 設計・実装の特徴
 
 - MVC（Model-View-Controller）構成を基本にしています。
@@ -105,7 +127,65 @@ php artisan migrate
   - `database/migrations/*` をコミットすることで、他の開発者と DB 構造を共有できます。
 - ローカライズ対応
   - `lang/` フォルダに日本語リソースが含まれており、多言語対応の例になっています。
+---
 
+## 処理の流れ
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant LI as BookIndex (Livewire)
+    participant BS as BookService
+    participant BM as Book (Model)
+    participant DB as MySQL
+
+    User->>LI: showEditBookModal($id)呼出
+    LI->>BM: findOrFail($id)
+    BM-->>LI: bookデータ返却
+    LI->>User: 編集用モーダル表示
+
+    User->>LI: 内容変更 & updateBook($Id)実行
+    LI->>LI: validate()実行 (rules参照)
+    
+    opt 画像がある場合
+        LI->>BS: uploadImage($newImage)
+        BS-->>LI: 画像パス返却
+    end
+
+    LI->>BM: updateWithData($all, $path)
+    BM->>DB: UPDATE実行
+    DB-->>LI: 成功
+    LI->>User: 一覧画面更新 (liveModal = false)
+```
+クラス構成図
+## 
+```mermaid
+classDiagram
+    class BookIndex {
+        +String title
+        +Int price
+        +Boolean showOnlyFavorites
+        +bookPost()
+        +updateBook(Id)
+        +toggleFavorite(bookId)
+    }
+    class Book {
+        +title
+        +price
+        +createWithData()
+        +updateWithData()
+    }
+    class User {
+        +favoriteBooks()
+    }
+    class BookService {
+        +uploadImage()
+        +deleteImage()
+    }
+
+    BookIndex --> Book : 依存・操作
+    BookIndex --> BookService : 処理委託
+    User "1" -- "*" Book : お気に入り(多対多)
+```
 ## 今後の改善予定
 - Livewire コンポーネントの責務整理
 - バリデーション・エラーハンドリングの改善
