@@ -15,6 +15,16 @@ class Book extends Model
     ];
 
     /**
+     * bookとuser関連付け
+     *
+     * @return App\Models\User
+     */
+    public function favoritedBy()
+    {
+        return $this->belongsToMany(User::class);
+    }
+
+    /**
      * 検索スコープ (renderをスッキリさせるため)
      * @param $query
      * @param $term 

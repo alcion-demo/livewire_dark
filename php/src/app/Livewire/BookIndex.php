@@ -9,6 +9,7 @@ use Livewire\WithPagination;
 use Illuminate\Support\Facades\Storage;
 use App\Services\BookService;
 use App\Enums\BookCategory;
+use Illuminate\Validation\Rules\Enum;
 
 class BookIndex extends Component
 {
@@ -28,18 +29,27 @@ class BookIndex extends Component
     public $editWork = false;
     public $search = '';
     public $url;
-
-    protected $rules = [
-        'title' => 'required|string|min:3|max:255',
-        'category' => 'nullable|string',
-        'newImage' => 'nullable|image|max:1024',
-        'price' => 'required|numeric|min:0',
-        'description' => 'required|string|max:1000',
-        'url' => 'nullable|url|max:2000',
-    ];
+    public $showOnlyFavorites = false;
 
     protected Book $bookModel;
     protected BookService $service;
+
+    /**
+     * バリデーション
+     * Enum使用の為(cast処理あるのでfrom無)
+     * @return array
+     */
+    protected function rules()
+    {
+        return [
+            'title' => 'required|string|min:3|max:255',
+            'category' => ['nullable', new Enum(BookCategory::class)],
+            'newImage' => 'nullable|image|max:1024',
+            'price' => 'required|numeric|min:0',
+            'description' => 'required|string|max:1000',
+            'url' => 'nullable|url|max:2000',
+        ];
+    }
 
     /**
      * Livewire の boot メソッドで一括注入
@@ -57,7 +67,7 @@ class BookIndex extends Component
      */
     public function bookPost(BookService $service){
         $this->validate();
-dd($category);
+
         $imagePath = null;
         $imagePath = $this->newImage ? $this->service->uploadImage($this->newImage) : null;
 
@@ -147,11 +157,24 @@ dd($category);
      */
     public function render()
     {
-        $booksQuery = Book::select('id', 'category', 'title', 'price', 'image', 'description', 'url', 'created_at');
+        $booksQuery = Book::with('favoritedBy')
+        ->select('id', 'category', 'title', 'price', 'image', 'description', 'url', 'created_at');
 
         // 検索キーワードがある場合、WHERE句を追加
         if (!empty($this->search)) {
             $booksQuery->whereRaw('LOWER(title) LIKE ?', ['%' . strtolower($this->search) . '%']);
+        }
+
+        // お気に入り件数を取得
+            $favoriteCount = Book::whereHas('favoritedBy', function($q) {
+                $q->where('user_id', auth()->id());
+            })->count();
+
+        // ★ お気に入りフィルターがONの場合、お気に入りが付加されている本だけに絞り込む
+        if ($this->showOnlyFavorites) {
+            $booksQuery->whereHas('favoritedBy', function($q) {
+                $q->where('user_id', auth()->id());
+            });
         }
 
         // ソートとページネーションを適用
@@ -159,6 +182,7 @@ dd($category);
 
         return view('livewire.book-index', [
             'books' => $books,
+            'favoriteCount' => $favoriteCount,
         ]);
     }
 
@@ -169,6 +193,21 @@ dd($category);
     {
         $this->reset('search');
         $this->resetPage();
+    }
+
+    public function toggleFavorite($bookId)
+    {
+        // ログインユーザーのお気に入りを切り替え（attach/detach を自動で行う toggle メソッドが便利です）
+        auth()->user()->favoriteBooks()->toggle($bookId);
+    }
+
+    /**
+     * フィルターの切り替え
+     */
+    public function toggleFavoriteFilter()
+    {
+        $this->showOnlyFavorites = !$this->showOnlyFavorites;
+        $this->resetPage(); // ページネーションを1ページ目に戻す
     }
 
 }
